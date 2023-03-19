@@ -12,6 +12,34 @@ from qr.utils import *
 from qr.version import __version__
 
 
+import torch.nn as nn
+
+class Embedder(nn.Module):
+  def __init__(self, input_dim = 25, hidden_dim = 100, output_dim = 3):
+        super(Embedder, self).__init__()
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
+        self.encoder = nn.Sequential(
+            nn.Linear(self.input_dim, self.hidden_dim),
+            nn.LeakyReLU(),
+            # nn.Dropout(p=0.5),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.LeakyReLU(),
+            # nn.Dropout(p=0.5),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.LeakyReLU(),
+            # nn.Dropout(p=0.5),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.LeakyReLU(),
+            nn.Linear(self.hidden_dim, self.output_dim),
+        )
+
+  def forward(self, x):
+      return self.encoder(x)
+
+import qr.deep_cost as dc
+
 def main(args):
     st_time = time.time()
     script_path = os.path.realpath(__file__).rsplit("/", 1)[0]
@@ -154,6 +182,8 @@ def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, 
     :param str cost_func: type of the fitness function
     :rtype: np.ndarray
     """
+    if cost_func == 'dl':
+        return dc.cost_between(u_idx, u_distribution)
     rooted_tree_indices = u2r_mapping[u_idx]
     costs = np.zeros(7)
     for i in range(7):
