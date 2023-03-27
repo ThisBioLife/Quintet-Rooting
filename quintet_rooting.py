@@ -10,6 +10,7 @@ from qr.fitness_cost import *
 from qr.quintet_sampling import *
 from qr.utils import *
 from qr.version import __version__
+from warnings import warn
 
 
 import torch.nn as nn
@@ -133,7 +134,7 @@ def main(args):
         quintet_unrooted_indices[j] = get_quintet_unrooted_index(subtree_u, quintets_u)
         quintet_scores[j] = compute_cost_rooted_quintets(quintet_tree_dist, quintet_unrooted_indices[j],
                                                          rooted_quintet_indices, cost_func, len(gene_trees),
-                                                         len(sample_quintet_taxa), shape_coef, abratio)
+                                                         len(sample_quintet_taxa), shape_coef, abratio, args.temperature)
         quintets_r_all.append(quintets_r)
 
     sys.stdout.write('Preprocessing time: %.2f sec\n' % (time.time() - proc_time))
@@ -173,7 +174,7 @@ def main(args):
     sys.stdout.write('Total execution time: %.2f sec\n' % (time.time() - st_time))
 
 
-def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, cost_func, k, q_size, shape_coef, abratio):
+def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, cost_func, k, q_size, shape_coef, abratio, temperature):
     """
     Scores the 7 possible rootings of an unrooted quintet
     :param np.ndarray u_distribution: unrooted quintet tree probability distribution
@@ -183,7 +184,9 @@ def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, 
     :rtype: np.ndarray
     """
     if cost_func == 'dl':
-        return dc.cost_between(u_idx, u_distribution)
+        if temperature != 1:
+            warn(f'Temperatire {temperature} not one is experimental')
+        return dc.cost_between(u_idx, u_distribution, temperature)
     rooted_tree_indices = u2r_mapping[u_idx]
     costs = np.zeros(7)
     for i in range(7):
@@ -259,6 +262,8 @@ def parse_args():
 
     parser.add_argument("-rs", "--seed", type=int,
                         help="random seed", required=False, default=1234)
+    
+    parser.add_argument("-temp", "--temperature", type=float,default=1.)
 
     args = parser.parse_args()
     return args
