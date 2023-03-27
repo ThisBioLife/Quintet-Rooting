@@ -35,10 +35,10 @@ def predict(u : np.ndarray):
 def obtain_transl():
     return torch.load(script_path + "/weights/table5_to_contrastive.pt")
 
-def cost_between(unrooted_id : int, u : np.ndarray) -> np.ndarray:
+def cost_between(unrooted_id : int, u : np.ndarray, temperature : float = 1.) -> np.ndarray:
     criterion = torch.nn.CrossEntropyLoss()
     transl = obtain_transl()
     candidate_topologies_ix = transl[u2r_mapping[unrooted_id]]
-    pred = predict(u)
+    pred = predict(u) / temperature
     cost = np.asarray([criterion(pred, c).detach().item() for c in candidate_topologies_ix])
     return cost
