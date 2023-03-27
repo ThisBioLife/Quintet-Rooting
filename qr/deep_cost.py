@@ -14,14 +14,14 @@ rooted_topologies = torch.load(script_path + "/rooted_topologies.pt")
 @lru_cache(None)
 def obtain_classifer():
     classifier = ClassifierHead()
-    classifier.load_state_dict(torch.load(script_path + "/weights/classifier_afterpretrain_v2.pt"))
+    classifier.load_state_dict(torch.load(script_path + "/weights/supcon_big_classifier.est.finetuned.pt"))
     classifier.eval()
     return classifier
 
 @lru_cache(None)
 def obtain_encoder():
     encoder = Encoder()
-    encoder.load_state_dict(torch.load(script_path + "/weights/encoder_afterpretrain_v2.pt"))
+    encoder.load_state_dict(torch.load(script_path + "/weights/supcon_big_encoder.est.finetuned.pt"))
     encoder.eval()
     return encoder
 
