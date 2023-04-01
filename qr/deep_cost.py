@@ -10,26 +10,33 @@ script_path = os.path.realpath(__file__).rsplit("/", 1)[0]
 u_enc = torch.load(script_path + "/u_encoder.pt")
 tree_enc = torch.load(script_path + "/tree_encoder.pt")
 rooted_topologies = torch.load(script_path + "/rooted_topologies.pt")
+r2u_mapping = torch.load(script_path + "/weights/r2u_mapping.pt")
 
 @lru_cache(None)
 def obtain_classifer():
-    classifier = ClassifierHead()
-    classifier.load_state_dict(torch.load(script_path + "/weights/supcon_big_classifier.true.finetuned.pt"))
+    classifier = ClassifierHead(20)
+    classifier.load_state_dict(torch.load(script_path + "/weights/skip.supcon_big_classifier.truegenetrees.9.pt"))
     classifier.eval()
     return classifier
 
 @lru_cache(None)
 def obtain_encoder():
-    encoder = Encoder()
-    encoder.load_state_dict(torch.load(script_path + "/weights/supcon_big_encoder.true.finetuned.pt"))
+    encoder = Encoder(30)
+    encoder.load_state_dict(torch.load(script_path + "/weights/skip.supcon_big_encoder.truegenetrees.9.pt"))
     encoder.eval()
     return encoder
 
-def predict(u : np.ndarray):
+@lru_cache(None)
+def basis_vector(i):
+    v = np.zeros(15)
+    v[i] = 1
+    return torch.tensor(v).float()
+
+def predict(unrooted_id : int, u : np.ndarray):
     encoder = obtain_encoder()
     classifier = obtain_classifer()
-    u_encoded = encoder(torch.tensor(u).float())
-    return classifier(u_encoded)
+    u_encoded = encoder(torch.cat([basis_vector(unrooted_id), torch.tensor(u).float()]))
+    return classifier(torch.cat([basis_vector(unrooted_id), u_encoded]))
 
 @lru_cache(None)
 def obtain_transl():
@@ -37,8 +44,7 @@ def obtain_transl():
 
 def cost_between(unrooted_id : int, u : np.ndarray, temperature : float = 1.) -> np.ndarray:
     criterion = torch.nn.CrossEntropyLoss()
-    transl = obtain_transl()
-    candidate_topologies_ix = transl[u2r_mapping[unrooted_id]]
-    pred = predict(u) / temperature
+    candidate_topologies_ix = torch.tensor(u2r_mapping[unrooted_id])
+    pred = predict(unrooted_id, u) / temperature
     cost = np.asarray([criterion(pred, c).detach().item() for c in candidate_topologies_ix])
     return cost
