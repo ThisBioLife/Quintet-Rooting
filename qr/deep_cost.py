@@ -17,14 +17,14 @@ WITH_LABEL = False
 @lru_cache(None)
 def obtain_classifer():
     classifier = ClassifierHead(20) if WITH_LABEL else ClassifierHead()
-    classifier.load_state_dict(torch.load(script_path + "/weights/supcon_big_classifier.truegenetrees.5.pt"))
+    classifier.load_state_dict(torch.load(script_path + "/weights/supcon_big_classifier.truegenetrees.5.pt", "cpu"))
     classifier.eval()
     return classifier
 
 @lru_cache(None)
 def obtain_encoder():
     encoder = Encoder(30) if WITH_LABEL else Encoder()
-    encoder.load_state_dict(torch.load(script_path + "/weights/supcon.99.pt"))
+    encoder.load_state_dict(torch.load(script_path + "/weights/supcon.99.pt", "cpu"))
     encoder.eval()
     return encoder
 
