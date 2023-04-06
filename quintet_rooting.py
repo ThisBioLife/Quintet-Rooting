@@ -2,6 +2,7 @@ import argparse
 import time
 import dendropy
 import numpy as np
+import json
 import sys
 from table_five import TreeSet
 
@@ -170,6 +171,9 @@ def main(args):
             for i in tree_ranking_indices:
                 fp.write(str(rooted_candidates[i]) + ';\n')
                 fp.write(str(r_score[i]) + '\n')
+    else:
+        with open(output_path + ".score.json", 'w') as fp:
+            json.dump({'score': r_score[min_idx], 'min_score': min_score}, fp)
 
     sys.stdout.write('Total execution time: %.2f sec\n' % (time.time() - st_time))
 
