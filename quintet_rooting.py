@@ -102,7 +102,7 @@ def main(args):
     elif sampling_method == 'le':
         sample_quintet_taxa = linear_quintet_encoding_sample(unrooted_species, taxon_set, mult_le)
     elif sampling_method == 'rl':
-        sample_quintet_taxa = random_linear_sample(taxon_set)
+        sample_quintet_taxa = random_linear_sample_lazy(taxon_set, mult_le)
 
     sys.stdout.write('Quintet sampling time: %.2f sec\n' % (time.time() - sm_time))
     proc_time = time.time()
@@ -169,7 +169,7 @@ def main(args):
         with open(output_path + ".rank.cfn", 'w') as fp:
             for i in tree_ranking_indices:
                 fp.write(str(rooted_candidates[i]) + ';\n')
-                fp.write(str(confidence_scores[i]) + '\n')
+                fp.write(str(r_score[i]) + '\n')
 
     sys.stdout.write('Total execution time: %.2f sec\n' % (time.time() - st_time))
 

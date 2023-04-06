@@ -1,6 +1,7 @@
 import random
 import dendropy
 import itertools
+import numpy as np
 
 
 def linear_quintet_encoding_sample(unrooted_tree, taxon_set, multiplicity=1):
@@ -60,15 +61,25 @@ def linear_quintet_encoding_sample(unrooted_tree, taxon_set, multiplicity=1):
                 continue
     return sample_quintet_taxa
 
+def random_linear_sample_lazy(taxon_set, mult=1):
+    np.random.seed(10086)
+    n = len(taxon_set)
+    res = set()
+    total = (2 * n - 3) * mult
+    while len(res) < total:
+        idx = np.random.choice(n, 5, replace=False)
+        np.random.shuffle(idx)
+        res.add(tuple(idx))
+    return [tuple(taxon_set[i] for i in c) for c in res]
 
-def random_linear_sample(taxon_set):
+def random_linear_sample(taxon_set, mult = 1):
     """
     Samples 2n-3 random quintets of taxa from given labels
     :param list taxon_set: labels of taxa
     :rtype: list
     """
     n = len(taxon_set)
-    return random.sample(list(itertools.combinations(taxon_set, 5)), 2 * n - 3)
+    return random.sample(list(itertools.combinations(taxon_set, 5)), (2 * n - 3) * mult)
 
 
 def triplet_cover_sample(taxon_set):
