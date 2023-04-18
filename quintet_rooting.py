@@ -1,19 +1,3 @@
-import argparse
-import time
-import dendropy
-import numpy as np
-import json
-import sys
-from table_five import TreeSet
-
-from qr.adr_theory import *
-from qr.fitness_cost import *
-from qr.quintet_sampling import *
-from qr.utils import *
-from qr.version import __version__
-from warnings import warn
-
-
 import torch.nn as nn
 
 class Embedder(nn.Module):
@@ -39,6 +23,25 @@ class Embedder(nn.Module):
 
   def forward(self, x):
       return self.encoder(x)
+
+
+import argparse
+import time
+import dendropy
+import numpy as np
+import json
+import sys
+from table_five import TreeSet
+
+from qr.adr_theory import *
+from qr.fitness_cost import *
+from qr.quintet_sampling import *
+from qr.utils import *
+from qr.version import __version__
+from warnings import warn
+
+
+
 
 import qr.deep_cost as dc
 
@@ -101,7 +104,7 @@ def main(args):
     elif sampling_method == 'tc':
         sample_quintet_taxa = triplet_cover_sample(taxon_set)
     elif sampling_method == 'le':
-        sample_quintet_taxa = linear_quintet_encoding_sample(unrooted_species, taxon_set, mult_le)
+        sample_quintet_taxa = linear_quintet_encoding_sample(unrooted_species, taxon_set, mult_le, treeset=gene_trees)
     elif sampling_method == 'rl':
         sample_quintet_taxa = random_linear_sample_lazy(taxon_set, mult_le)
 
