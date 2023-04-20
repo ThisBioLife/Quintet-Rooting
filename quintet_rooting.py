@@ -1,3 +1,4 @@
+from typing import Tuple
 import torch.nn as nn
 
 class Embedder(nn.Module):
@@ -43,7 +44,22 @@ from warnings import warn
 
 
 
+
 import qr.deep_cost as dc
+
+def extract_subcounts(t : torch.Tensor, indices: Tuple[int, int, int, int, int]) -> np.ndarray:
+    out = []
+    for i in range(5):
+        for j in range(i, 5):
+            out.append(t[indices[i], indices[j]].item())
+    return np.asarray(out, dtype=np.single)
+
+def features_from_co_occurence(d, q):
+    q_int = [int(x) for x in q]
+    t = extract_subcounts(d, q_int)
+    normalizer = t[0] + t[5] + t[9] + t[12] + t[14]
+    t = t / normalizer
+    return t
 
 def main(args):
     st_time = time.time()
@@ -59,6 +75,9 @@ def main(args):
     shape_coef = args.coef
     mult_le = args.multiplicity
     abratio = args.abratio
+    co_matrix = args.gdl
+    if co_matrix is not None:
+        co_matrix = torch.load(co_matrix)
 
     header = """*********************************
 *     Quintet Rooting """ + __version__ + """    *
@@ -104,7 +123,7 @@ def main(args):
     elif sampling_method == 'tc':
         sample_quintet_taxa = triplet_cover_sample(taxon_set)
     elif sampling_method == 'le':
-        sample_quintet_taxa = linear_quintet_encoding_sample(unrooted_species, taxon_set, mult_le, treeset=gene_trees)
+        sample_quintet_taxa = linear_quintet_encoding_sample(unrooted_species, taxon_set, mult_le)
     elif sampling_method == 'rl':
         sample_quintet_taxa = random_linear_sample_lazy(taxon_set, mult_le)
 
@@ -136,9 +155,13 @@ def main(args):
         if quintet_normalizer != 0:
             quintet_tree_dist = quintet_tree_dist / quintet_normalizer
         quintet_unrooted_indices[j] = get_quintet_unrooted_index(subtree_u, quintets_u)
+        if co_matrix is not None:
+            gdl_feature = features_from_co_occurence(co_matrix, q_taxa)
+        else:
+            gdl_feature = None
         quintet_scores[j] = compute_cost_rooted_quintets(quintet_tree_dist, quintet_unrooted_indices[j],
                                                          rooted_quintet_indices, cost_func, len(gene_trees),
-                                                         len(sample_quintet_taxa), shape_coef, abratio, args.temperature)
+                                                         len(sample_quintet_taxa), shape_coef, abratio, args.temperature, gdl_feature)
         quintets_r_all.append(quintets_r)
 
     sys.stdout.write('Preprocessing time: %.2f sec\n' % (time.time() - proc_time))
@@ -181,7 +204,10 @@ def main(args):
     sys.stdout.write('Total execution time: %.2f sec\n' % (time.time() - st_time))
 
 
-def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, cost_func, k, q_size, shape_coef, abratio, temperature):
+def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, cost_func, k, q_size, shape_coef, 
+                                 abratio, 
+                                 temperature,
+                                 co_occurrence_matrix=None):
     """
     Scores the 7 possible rootings of an unrooted quintet
     :param np.ndarray u_distribution: unrooted quintet tree probability distribution
@@ -194,6 +220,8 @@ def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, 
         if temperature != 1:
             warn(f'Temperatire {temperature} not one is experimental')
         return dc.cost_between(u_idx, u_distribution, temperature)
+    elif cost_func == 'gdl':
+        return dc.gdl_cost_between(u_idx, co_occurrence_matrix)
     rooted_tree_indices = u2r_mapping[u_idx]
     costs = np.zeros(7)
     for i in range(7):
@@ -271,6 +299,8 @@ def parse_args():
                         help="random seed", required=False, default=1234)
     
     parser.add_argument("-temp", "--temperature", type=float,default=1.)
+
+    parser.add_argument("-gdl", "--gdl", required=False, help="GDL signal, the co-occurence matrix")
 
     args = parser.parse_args()
     return args

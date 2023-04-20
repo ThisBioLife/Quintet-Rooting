@@ -15,16 +15,16 @@ r2u_mapping = torch.load(script_path + "/weights/r2u_mapping.pt")
 WITH_LABEL = False
 
 @lru_cache(None)
-def obtain_classifer():
+def obtain_classifer(path="/weights/supcon_big_classifier.truegenetrees.5.pt"):
     classifier = ClassifierHead(20) if WITH_LABEL else ClassifierHead()
-    classifier.load_state_dict(torch.load(script_path + "/weights/supcon_big_classifier.true.finetuned.pt", "cpu"))
+    classifier.load_state_dict(torch.load(script_path + path, "cpu"))
     classifier.eval()
     return classifier
 
 @lru_cache(None)
-def obtain_encoder():
+def obtain_encoder(path="/weights/supcon.99.pt"):
     encoder = Encoder(30) if WITH_LABEL else Encoder()
-    encoder.load_state_dict(torch.load(script_path + "/weights/supcon_big_encoder.true.finetuned.pt", "cpu"))
+    encoder.load_state_dict(torch.load(script_path + path, "cpu"))
     encoder.eval()
     return encoder
 
@@ -53,5 +53,19 @@ def cost_between(unrooted_id : int, u : np.ndarray, temperature : float = 1.) ->
     transl = obtain_transl()
     candidate_topologies_ix = transl[u2r_mapping[unrooted_id]]
     pred = predict(unrooted_id, u) / temperature
+    cost = np.asarray([criterion(pred, c).detach().item() for c in candidate_topologies_ix])
+    return cost
+
+def gdl_predict(co):
+    encoder = obtain_encoder("/weights/gdl/encoder.pt")
+    classifier = obtain_classifer("/weights/gdl/classifier.pt")
+    u_encoded = encoder(torch.tensor(co).float())
+    return classifier(u_encoded)
+
+def gdl_cost_between(unrooted_id : int, u : np.ndarray) -> np.ndarray:
+    criterion = torch.nn.CrossEntropyLoss()
+    transl = obtain_transl()
+    candidate_topologies_ix = transl[u2r_mapping[unrooted_id]]
+    pred = gdl_predict(u)
     cost = np.asarray([criterion(pred, c).detach().item() for c in candidate_topologies_ix])
     return cost
