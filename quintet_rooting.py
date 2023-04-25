@@ -32,7 +32,7 @@ import dendropy
 import numpy as np
 import json
 import sys
-from table_five import TreeSet
+from table_fifth import TreeSet
 
 from qr.adr_theory import *
 from qr.fitness_cost import *
@@ -54,8 +54,8 @@ def extract_subcounts(t : torch.Tensor, indices: Tuple[int, int, int, int, int])
             out.append(t[indices[i], indices[j]].item())
     return np.asarray(out, dtype=np.single)
 
-def features_from_co_occurence(d, q):
-    q_int = [int(x) for x in q]
+def features_from_co_occurence(d, label2idx, q):
+    q_int = [label2idx[x] for x in q]
     t = extract_subcounts(d, q_int)
     normalizer = t[0] + t[5] + t[9] + t[12] + t[14]
     t = t / normalizer
@@ -77,12 +77,15 @@ def main(args):
     abratio = args.abratio
     co_matrix = args.gdl
     if co_matrix is not None:
+        label2idx = torch.load(co_matrix + '.labels2idx')
         co_matrix = torch.load(co_matrix)
 
     header = """*********************************
 *     Quintet Rooting """ + __version__ + """    *
 *********************************"""
     sys.stdout.write(header + '\n')
+
+    sys.stdout.write('Species tree: ' + species_tree_path + '\n')
 
 
     tns = dendropy.TaxonNamespace()
@@ -149,14 +152,14 @@ def main(args):
             dendropy.Tree.get(data=map_taxon_namespace(str(q), q_taxa) + ';', schema='newick', rooting='force-rooted',
                               taxon_namespace=tns) for q in rooted_quintets_base]
         subtree_u = unrooted_species.extract_tree_with_taxa_labels(labels=q_taxa, suppress_unifurcations=True)
-        quintet_counts = np.asarray(gene_trees.tally_single_quintet(q_taxa))
-        quintet_normalizer = sum(quintet_counts) if args.normalized else len(gene_trees)
+        quintet_counts = np.asarray(gene_trees.coalesence_times_by_topology(q_taxa)) if args.gdl is None else np.zeros(15)
+        # quintet_normalizer = sum(quintet_counts) if args.normalized else len(gene_trees)
         quintet_tree_dist = quintet_counts
-        if quintet_normalizer != 0:
-            quintet_tree_dist = quintet_tree_dist / quintet_normalizer
+        # if quintet_normalizer != 0:
+        #     quintet_tree_dist = quintet_tree_dist / quintet_normalizer
         quintet_unrooted_indices[j] = get_quintet_unrooted_index(subtree_u, quintets_u)
         if co_matrix is not None:
-            gdl_feature = features_from_co_occurence(co_matrix, q_taxa)
+            gdl_feature = features_from_co_occurence(co_matrix, label2idx, q_taxa)
         else:
             gdl_feature = None
         quintet_scores[j] = compute_cost_rooted_quintets(quintet_tree_dist, quintet_unrooted_indices[j],

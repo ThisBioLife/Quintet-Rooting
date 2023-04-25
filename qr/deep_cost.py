@@ -14,18 +14,22 @@ r2u_mapping = torch.load(script_path + "/weights/r2u_mapping.pt")
 
 WITH_LABEL = False
 
+OLD_CLASSIFIER_PATH = "/weights/supcon_big_classifier.truegenetrees.5.pt"
 @lru_cache(None)
-def obtain_classifer(path="/weights/supcon_big_classifier.truegenetrees.5.pt"):
-    classifier = ClassifierHead(20) if WITH_LABEL else ClassifierHead()
+def obtain_classifer(path=""):
+    classifier = ClassifierHead() if WITH_LABEL else ClassifierHead()
     classifier.load_state_dict(torch.load(script_path + path, "cpu"))
     classifier.eval()
+    print(classifier)
     return classifier
 
+OLD_ENCODER_PATH = "/weights/supcon.99.pt"
 @lru_cache(None)
 def obtain_encoder(path="/weights/supcon.99.pt"):
-    encoder = Encoder(30) if WITH_LABEL else Encoder()
+    encoder = Encoder(15 * 11) if WITH_LABEL else Encoder(15 * 11)
     encoder.load_state_dict(torch.load(script_path + path, "cpu"))
     encoder.eval()
+    print(encoder)
     return encoder
 
 @lru_cache(None)
@@ -35,8 +39,8 @@ def basis_vector(i):
     return torch.tensor(v).float()
 
 def predict(unrooted_id : int, u : np.ndarray):
-    encoder = obtain_encoder()
-    classifier = obtain_classifer()
+    encoder = obtain_encoder("/weights/wide/encoder.pt")
+    classifier = obtain_classifer("/weights/wide/classifier.pt")
     if WITH_LABEL:
         u_encoded = encoder(torch.cat([basis_vector(unrooted_id), torch.tensor(u).float()]))
         return classifier(torch.cat([basis_vector(unrooted_id), u_encoded]))
