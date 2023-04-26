@@ -18,7 +18,7 @@ WITH_LABEL = False
 OLD_CLASSIFIER_PATH = "/weights/supcon_big_classifier.truegenetrees.5.pt"
 @lru_cache(None)
 def obtain_classifer(path="", dim=5):
-    classifier = ClassifierHead(dim) if WITH_LABEL else ClassifierHead()
+    classifier = ClassifierHead(dim)
     classifier.load_state_dict(torch.load(script_path + path, "cpu"))
     classifier.eval()
     print(classifier)
