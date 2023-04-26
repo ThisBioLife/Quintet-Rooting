@@ -16,8 +16,8 @@ WITH_LABEL = False
 
 OLD_CLASSIFIER_PATH = "/weights/supcon_big_classifier.truegenetrees.5.pt"
 @lru_cache(None)
-def obtain_classifer(path=""):
-    classifier = ClassifierHead() if WITH_LABEL else ClassifierHead()
+def obtain_classifer(path="", dim=5):
+    classifier = ClassifierHead(dim) if WITH_LABEL else ClassifierHead()
     classifier.load_state_dict(torch.load(script_path + path, "cpu"))
     classifier.eval()
     print(classifier)
@@ -25,8 +25,8 @@ def obtain_classifer(path=""):
 
 OLD_ENCODER_PATH = "/weights/supcon.99.pt"
 @lru_cache(None)
-def obtain_encoder(path="/weights/supcon.99.pt"):
-    encoder = Encoder(15 * 11) if WITH_LABEL else Encoder(15 * 11)
+def obtain_encoder(path="/weights/supcon.99.pt", dim=15*11):
+    encoder = Encoder(dim)
     encoder.load_state_dict(torch.load(script_path + path, "cpu"))
     encoder.eval()
     print(encoder)
@@ -57,15 +57,15 @@ def ils_cost_between(unrooted_id : int, ils_signal : np.ndarray, temperature : f
     return cost
 
 def gdl_predict(co):
-    encoder = obtain_encoder("/weights/gdl/encoder.pt")
+    encoder = obtain_encoder("/weights/gdl/encoder.pt", dim=15)
     classifier = obtain_classifer("/weights/gdl/classifier.pt")
     u_encoded = encoder(torch.tensor(co).float())
     return classifier(u_encoded)
 
 def joint_predict(ils_signal, gdl_signal):
     encoder_ils = obtain_encoder("/weights/joint/encoder_ils.pt")
-    encoder_gdl = obtain_encoder("/weights/joint/encoder_gdl.pt")
-    classifier = obtain_classifer("/weights/joint/classifier.pt")
+    encoder_gdl = obtain_encoder("/weights/joint/encoder_gdl.pt", dim=15)
+    classifier = obtain_classifer("/weights/joint/classifier.pt", dim=10)
     u_encoded_ils = encoder_ils(torch.tensor(ils_signal).float())
     u_encoded_gdl = encoder_gdl(torch.tensor(gdl_signal).float())
     u_encoded = torch.cat([u_encoded_ils, u_encoded_gdl], dim=-1)
