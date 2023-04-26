@@ -1,3 +1,4 @@
+from warnings import warn
 import torch
 import numpy as np
 import os
@@ -81,6 +82,7 @@ def gdl_cost_between(unrooted_id : int, gdl_signal : np.ndarray) -> np.ndarray:
 
 def joint_cost_between(unrooted_id : int, ils_signal : np.ndarray, gdl_signal: np.ndarray) -> np.ndarray:
     if ils_signal.sum() == 0:
+        warn("ILS signal is zero, returning GDL cost")
         return gdl_cost_between(unrooted_id, gdl_signal)
     criterion = torch.nn.CrossEntropyLoss()
     transl = obtain_transl()
