@@ -153,10 +153,7 @@ def main(args):
                               taxon_namespace=tns) for q in rooted_quintets_base]
         subtree_u = unrooted_species.extract_tree_with_taxa_labels(labels=q_taxa, suppress_unifurcations=True)
         quintet_counts = np.asarray(gene_trees.coalesence_times_by_topology(q_taxa)) if args.gdl is None else np.zeros(15)
-        # quintet_normalizer = sum(quintet_counts) if args.normalized else len(gene_trees)
         quintet_tree_dist = quintet_counts
-        # if quintet_normalizer != 0:
-        #     quintet_tree_dist = quintet_tree_dist / quintet_normalizer
         quintet_unrooted_indices[j] = get_quintet_unrooted_index(subtree_u, quintets_u)
         if co_matrix is not None:
             gdl_feature = features_from_co_occurence(co_matrix, label2idx, q_taxa)
@@ -222,9 +219,11 @@ def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, 
     if cost_func == 'dl':
         if temperature != 1:
             warn(f'Temperatire {temperature} not one is experimental')
-        return dc.cost_between(u_idx, u_distribution, temperature)
+        return dc.ils_cost_between(u_idx, u_distribution, temperature)
     elif cost_func == 'gdl':
         return dc.gdl_cost_between(u_idx, co_occurrence_matrix)
+    elif cost_func == 'joint':
+        return dc.joint_cost_between(u_idx, u_distribution, co_occurrence_matrix)
     rooted_tree_indices = u2r_mapping[u_idx]
     costs = np.zeros(7)
     for i in range(7):

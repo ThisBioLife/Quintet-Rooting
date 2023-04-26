@@ -38,25 +38,21 @@ def basis_vector(i):
     v[i] = 1
     return torch.tensor(v).float()
 
-def predict(unrooted_id : int, u : np.ndarray):
-    encoder = obtain_encoder("/weights/wide/encoder.pt")
-    classifier = obtain_classifer("/weights/wide/classifier.pt")
-    if WITH_LABEL:
-        u_encoded = encoder(torch.cat([basis_vector(unrooted_id), torch.tensor(u).float()]))
-        return classifier(torch.cat([basis_vector(unrooted_id), u_encoded]))
-    else:
-        u_encoded = encoder(torch.tensor(u).float())
-        return classifier(u_encoded)
+def predict_ils(u : np.ndarray):
+    encoder = obtain_encoder("/weights/ils/encoder.pt")
+    classifier = obtain_classifer("/weights/ils/classifier.pt")
+    u_encoded = encoder(torch.tensor(u).float())
+    return classifier(u_encoded)
 
 @lru_cache(None)
 def obtain_transl():
     return torch.load(script_path + "/weights/table5_to_contrastive.pt")
 
-def cost_between(unrooted_id : int, u : np.ndarray, temperature : float = 1.) -> np.ndarray:
+def ils_cost_between(unrooted_id : int, ils_signal : np.ndarray, temperature : float = 1.) -> np.ndarray:
     criterion = torch.nn.CrossEntropyLoss()
     transl = obtain_transl()
     candidate_topologies_ix = transl[u2r_mapping[unrooted_id]]
-    pred = predict(unrooted_id, u) / temperature
+    pred = predict_ils(ils_signal) / temperature
     cost = np.asarray([criterion(pred, c).detach().item() for c in candidate_topologies_ix])
     return cost
 
@@ -66,10 +62,29 @@ def gdl_predict(co):
     u_encoded = encoder(torch.tensor(co).float())
     return classifier(u_encoded)
 
-def gdl_cost_between(unrooted_id : int, u : np.ndarray) -> np.ndarray:
+def joint_predict(ils_signal, gdl_signal):
+    encoder_ils = obtain_encoder("/weights/joint/encoder_ils.pt")
+    encoder_gdl = obtain_encoder("/weights/joint/encoder_gdl.pt")
+    classifier = obtain_classifer("/weights/joint/classifier.pt")
+    u_encoded_ils = encoder_ils(torch.tensor(ils_signal).float())
+    u_encoded_gdl = encoder_gdl(torch.tensor(gdl_signal).float())
+    u_encoded = torch.cat([u_encoded_ils, u_encoded_gdl], dim=-1)
+    return classifier(u_encoded)
+
+def gdl_cost_between(unrooted_id : int, gdl_signal : np.ndarray) -> np.ndarray:
     criterion = torch.nn.CrossEntropyLoss()
     transl = obtain_transl()
     candidate_topologies_ix = transl[u2r_mapping[unrooted_id]]
-    pred = gdl_predict(u)
+    pred = gdl_predict(gdl_signal)
+    cost = np.asarray([criterion(pred, c).detach().item() for c in candidate_topologies_ix])
+    return cost
+
+def joint_cost_between(unrooted_id : int, ils_signal : np.ndarray, gdl_signal: np.ndarray) -> np.ndarray:
+    if ils_signal.sum() == 0:
+        return gdl_cost_between(unrooted_id, gdl_signal)
+    criterion = torch.nn.CrossEntropyLoss()
+    transl = obtain_transl()
+    candidate_topologies_ix = transl[u2r_mapping[unrooted_id]]
+    pred = joint_predict(ils_signal, gdl_signal)
     cost = np.asarray([criterion(pred, c).detach().item() for c in candidate_topologies_ix])
     return cost

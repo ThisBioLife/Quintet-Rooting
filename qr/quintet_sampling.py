@@ -3,10 +3,10 @@ import dendropy
 import itertools
 import numpy as np
 import torch
-from qr.deep_cost import predict
+from qr.deep_cost import predict_ils
 
 def _predict(u : np.ndarray):
-    return predict(-1, u)
+    return predict_ils(-1, u)
 
 def confidence(u : np.ndarray):
     return np.max(torch.softmax(_predict(u), dim=0).detach().numpy())
