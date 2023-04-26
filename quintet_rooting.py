@@ -152,7 +152,7 @@ def main(args):
             dendropy.Tree.get(data=map_taxon_namespace(str(q), q_taxa) + ';', schema='newick', rooting='force-rooted',
                               taxon_namespace=tns) for q in rooted_quintets_base]
         subtree_u = unrooted_species.extract_tree_with_taxa_labels(labels=q_taxa, suppress_unifurcations=True)
-        quintet_counts = np.asarray(gene_trees.coalesence_times_by_topology(q_taxa)) if args.gdl is None else np.zeros(15)
+        quintet_counts = np.asarray(gene_trees.coalesence_times_by_topology(q_taxa))
         quintet_tree_dist = quintet_counts
         quintet_unrooted_indices[j] = get_quintet_unrooted_index(subtree_u, quintets_u)
         if co_matrix is not None:
