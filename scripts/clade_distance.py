@@ -52,7 +52,7 @@ def main(args):
                             taxon_namespace=tax)
 
     nl, cd = clade_distance(tr1, tr2)
-    print("Normalized Clade distance on %d shared leaves: %.3f" % (nl, cd))
+    print("%s Normalized Clade distance on %d shared leaves: %.3f" % (args.tree1, nl, cd))
 
 
 if __name__ == "__main__":
