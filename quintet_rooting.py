@@ -161,7 +161,7 @@ def main(args):
             gdl_feature = None
         quintet_scores[j] = compute_cost_rooted_quintets(quintet_tree_dist, quintet_unrooted_indices[j],
                                                          rooted_quintet_indices, cost_func, len(gene_trees),
-                                                         len(sample_quintet_taxa), shape_coef, abratio, args.temperature, gdl_feature)
+                                                         len(sample_quintet_taxa), shape_coef, abratio, gdl_feature)
         quintets_r_all.append(quintets_r)
 
     sys.stdout.write('Preprocessing time: %.2f sec\n' % (time.time() - proc_time))
@@ -206,7 +206,6 @@ def main(args):
 
 def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, cost_func, k, q_size, shape_coef, 
                                  abratio, 
-                                 temperature,
                                  co_occurrence_matrix=None):
     """
     Scores the 7 possible rootings of an unrooted quintet
