@@ -1,5 +1,6 @@
 from typing import Tuple
 import torch.nn as nn
+import torch.nn.functional as F
 
 class Embedder(nn.Module):
   def __init__(self, input_dim = 25, hidden_dim = 100, output_dim = 3):
@@ -23,7 +24,7 @@ class Embedder(nn.Module):
         )
 
   def forward(self, x):
-      return self.encoder(x)
+      return F.normalize(self.encoder(x), p=2, dim=-1)
 
 
 import argparse
