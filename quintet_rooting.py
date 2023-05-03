@@ -1,16 +1,65 @@
+from typing import Tuple
+import torch.nn as nn
+
+class Embedder(nn.Module):
+  def __init__(self, input_dim = 25, hidden_dim = 100, output_dim = 3):
+        super(Embedder, self).__init__()
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
+        self.encoder = nn.Sequential(
+            nn.Linear(self.input_dim, self.hidden_dim),
+            nn.LeakyReLU(),
+            # nn.Dropout(p=0.5),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.LeakyReLU(),
+            # nn.Dropout(p=0.5),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.LeakyReLU(),
+            # nn.Dropout(p=0.5),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.LeakyReLU(),
+            nn.Linear(self.hidden_dim, self.output_dim),
+        )
+
+  def forward(self, x):
+      return self.encoder(x)
+
+
 import argparse
 import time
 import dendropy
 import numpy as np
+import json
 import sys
-from table_five import TreeSet
+from table_fifth import TreeSet
 
 from qr.adr_theory import *
 from qr.fitness_cost import *
 from qr.quintet_sampling import *
 from qr.utils import *
 from qr.version import __version__
+from warnings import warn
 
+
+
+
+
+import qr.deep_cost as dc
+
+def extract_subcounts(t : torch.Tensor, indices: Tuple[int, int, int, int, int]) -> np.ndarray:
+    out = []
+    for i in range(5):
+        for j in range(i, 5):
+            out.append(t[indices[i], indices[j]].item())
+    return np.asarray(out, dtype=np.single)
+
+def features_from_co_occurence(d, label2idx, q):
+    q_int = [label2idx[x] for x in q]
+    t = extract_subcounts(d, q_int)
+    normalizer = t[0] + t[5] + t[9] + t[12] + t[14]
+    t = t / normalizer
+    return t
 
 def main(args):
     st_time = time.time()
@@ -26,11 +75,17 @@ def main(args):
     shape_coef = args.coef
     mult_le = args.multiplicity
     abratio = args.abratio
+    co_matrix = args.gdl
+    if co_matrix is not None:
+        label2idx = torch.load(co_matrix + '.labels2idx')
+        co_matrix = torch.load(co_matrix)
 
     header = """*********************************
 *     Quintet Rooting """ + __version__ + """    *
 *********************************"""
     sys.stdout.write(header + '\n')
+
+    sys.stdout.write('Species tree: ' + species_tree_path + '\n')
 
 
     tns = dendropy.TaxonNamespace()
@@ -73,7 +128,7 @@ def main(args):
     elif sampling_method == 'le':
         sample_quintet_taxa = linear_quintet_encoding_sample(unrooted_species, taxon_set, mult_le)
     elif sampling_method == 'rl':
-        sample_quintet_taxa = random_linear_sample(taxon_set)
+        sample_quintet_taxa = random_linear_sample_lazy(taxon_set, mult_le)
 
     sys.stdout.write('Quintet sampling time: %.2f sec\n' % (time.time() - sm_time))
     proc_time = time.time()
@@ -97,15 +152,16 @@ def main(args):
             dendropy.Tree.get(data=map_taxon_namespace(str(q), q_taxa) + ';', schema='newick', rooting='force-rooted',
                               taxon_namespace=tns) for q in rooted_quintets_base]
         subtree_u = unrooted_species.extract_tree_with_taxa_labels(labels=q_taxa, suppress_unifurcations=True)
-        quintet_counts = np.asarray(gene_trees.tally_single_quintet(q_taxa))
-        quintet_normalizer = sum(quintet_counts) if args.normalized else len(gene_trees)
+        quintet_counts = np.asarray(gene_trees.coalesence_times_by_topology(q_taxa))
         quintet_tree_dist = quintet_counts
-        if quintet_normalizer != 0:
-            quintet_tree_dist = quintet_tree_dist / quintet_normalizer
         quintet_unrooted_indices[j] = get_quintet_unrooted_index(subtree_u, quintets_u)
+        if co_matrix is not None:
+            gdl_feature = features_from_co_occurence(co_matrix, label2idx, q_taxa)
+        else:
+            gdl_feature = None
         quintet_scores[j] = compute_cost_rooted_quintets(quintet_tree_dist, quintet_unrooted_indices[j],
                                                          rooted_quintet_indices, cost_func, len(gene_trees),
-                                                         len(sample_quintet_taxa), shape_coef, abratio)
+                                                         len(sample_quintet_taxa), shape_coef, abratio, gdl_feature)
         quintets_r_all.append(quintets_r)
 
     sys.stdout.write('Preprocessing time: %.2f sec\n' % (time.time() - proc_time))
@@ -140,12 +196,17 @@ def main(args):
         with open(output_path + ".rank.cfn", 'w') as fp:
             for i in tree_ranking_indices:
                 fp.write(str(rooted_candidates[i]) + ';\n')
-                fp.write(str(confidence_scores[i]) + '\n')
+                fp.write(str(r_score[i]) + '\n')
+    else:
+        with open(output_path + ".score.json", 'w') as fp:
+            json.dump({'score': r_score[min_idx], 'min_score': min_score}, fp)
 
     sys.stdout.write('Total execution time: %.2f sec\n' % (time.time() - st_time))
 
 
-def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, cost_func, k, q_size, shape_coef, abratio):
+def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, cost_func, k, q_size, shape_coef, 
+                                 abratio, 
+                                 co_occurrence_matrix=None):
     """
     Scores the 7 possible rootings of an unrooted quintet
     :param np.ndarray u_distribution: unrooted quintet tree probability distribution
@@ -154,6 +215,12 @@ def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, 
     :param str cost_func: type of the fitness function
     :rtype: np.ndarray
     """
+    if cost_func == 'dl':
+        return dc.ils_cost_between(u_idx, u_distribution)
+    elif cost_func == 'gdl':
+        return dc.gdl_cost_between(u_idx, co_occurrence_matrix)
+    elif cost_func == 'joint':
+        return dc.joint_cost_between(u_idx, u_distribution, co_occurrence_matrix)
     rooted_tree_indices = u2r_mapping[u_idx]
     costs = np.zeros(7)
     for i in range(7):
@@ -229,6 +296,8 @@ def parse_args():
 
     parser.add_argument("-rs", "--seed", type=int,
                         help="random seed", required=False, default=1234)
+
+    parser.add_argument("-gdl", "--gdl", required=False, help="GDL signal, the co-occurence matrix")
 
     args = parser.parse_args()
     return args

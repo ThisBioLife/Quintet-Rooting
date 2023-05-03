@@ -1,4 +1,47 @@
-# Quintet Rooting
+# QRei
+
+Quintet Rooting using Encoded sIgnals.
+
+> This is a research fork of Quintet Rooting. The new method is still experimental, so
+> the code, the interface, is very much not clean yet. We do, however, provide how to run the method for reproducibility.
+> Future work will upload a version of this up to Bioconda.
+
+## Installation
+
+Ensure you have Python at least 3.7 and install dependencies from `requirements.txt`:
+
+```bash
+pip install -r requirements.txt
+```
+
+In addition, you want to install PyTorch in your preferred way (we did not put it in `requirements.txt` because
+people have their own way of install torch that we do not
+want to interfere with. If you want, you can still do `pip3 install torch` or something like that).
+
+## Inference
+
+### Single-copy trees using ILS signal
+
+```bash
+$ python3 quintet_rooting.py -t ./example/avian-species-10.tre -g ./example/avian-genes-10.tre -c dl -o ./example/avian-rooted-10.tre
+```
+
+### Multi-copy trees using GDL signal only
+
+First preprocess using `extract_log_counts.py` and [DISCO](https://github.com/JSdoubleL/DISCO), the latter
+assumed to be installed at `disco.py`.
+
+```bash
+$ python3 extract_counts.py -s ./example/gdl/s_tree.trees ./example/gdl/g_100.k100.trees ./example/gdl/g_100.k100.trees.co.pt
+$ python3 disco.py -i ./example/gdl/g_100.k100.trees -d _ -o ./example/gdl/g_100.k100.trees.disco
+$ python3 quintet_rooting.py -t ./example/gdl/s_tree.trees -g ./example/gdl/g_100.k100.trees.disco -c gdl -gdl ./example/gdl/g_100.k100.trees.co.pt -o ./example/gdl/s_tree.trees.rooted
+```
+
+### Multi-copy trees using GDL+ILS signals
+
+The same as above, but change `-c gdl` to `-c joint`.
+
+## Old README below
 
 **Quintet Rooting (QR)** is a polynomial-time method for rooting species trees from multi-locus datasets. QR is designed based on the theoretical work by [Allman, Degnan, and Rhodes (J Math Biol, 2011)](https://link.springer.com/article/10.1007/s00285-010-0355-7) that prove the identifiability of rooted 5-taxon trees from unrooted gene trees under the multi-species coalescent (MSC) model. QR is especially useful for multi-locus datasets with gene tree discordance due to incomplete lineage sorting (ILS). QR scores different rootings of a given unrooted species tree according to the distribution of unrooted quintets (i.e. 5-leaf trees) induced by a given set of gene trees, and returns the best rooting as well as a ranking over all rooted trees in the search space with a confidence score assigned to each.
 
