@@ -217,9 +217,7 @@ def compute_cost_rooted_quintets(u_distribution, u_idx, rooted_quintet_indices, 
     :rtype: np.ndarray
     """
     if cost_func == 'dl':
-        if temperature != 1:
-            warn(f'Temperatire {temperature} not one is experimental')
-        return dc.ils_cost_between(u_idx, u_distribution, temperature)
+        return dc.ils_cost_between(u_idx, u_distribution)
     elif cost_func == 'gdl':
         return dc.gdl_cost_between(u_idx, co_occurrence_matrix)
     elif cost_func == 'joint':
@@ -299,8 +297,6 @@ def parse_args():
 
     parser.add_argument("-rs", "--seed", type=int,
                         help="random seed", required=False, default=1234)
-    
-    parser.add_argument("-temp", "--temperature", type=float,default=1.)
 
     parser.add_argument("-gdl", "--gdl", required=False, help="GDL signal, the co-occurence matrix")
 
