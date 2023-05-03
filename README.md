@@ -28,7 +28,7 @@ $ python3 quintet_rooting.py -t ./example/avian-species-10.tre -g ./example/avia
 
 ### Multi-copy trees using GDL signal only
 
-First preprocess using `extract_log_counts.py` and [DISCO](https://github.com/JSdoubleL/DISCO), the latter
+First preprocess using `extract_counts.py` and [DISCO](https://github.com/JSdoubleL/DISCO), the latter
 assumed to be installed at `disco.py`.
 
 ```bash
