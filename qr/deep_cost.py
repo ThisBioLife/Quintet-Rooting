@@ -8,8 +8,7 @@ from functools import lru_cache
 import torch.functional as F
 
 script_path = os.path.realpath(__file__).rsplit("/", 1)[0]
-u_enc = torch.load(script_path + "/u_encoder.pt")
-tree_enc = torch.load(script_path + "/tree_encoder.pt")
+
 rooted_topologies = torch.load(script_path + "/rooted_topologies.pt")
 r2u_mapping = torch.load(script_path + "/weights/r2u_mapping.pt")
 

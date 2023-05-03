@@ -2,29 +2,7 @@ from typing import Tuple
 import torch.nn as nn
 import torch.nn.functional as F
 
-class Embedder(nn.Module):
-  def __init__(self, input_dim = 25, hidden_dim = 100, output_dim = 3):
-        super(Embedder, self).__init__()
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
-        self.encoder = nn.Sequential(
-            nn.Linear(self.input_dim, self.hidden_dim),
-            nn.LeakyReLU(),
-            # nn.Dropout(p=0.5),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
-            nn.LeakyReLU(),
-            # nn.Dropout(p=0.5),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
-            nn.LeakyReLU(),
-            # nn.Dropout(p=0.5),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
-            nn.LeakyReLU(),
-            nn.Linear(self.hidden_dim, self.output_dim),
-        )
 
-  def forward(self, x):
-      return F.normalize(self.encoder(x), p=2, dim=-1)
 
 
 import argparse
