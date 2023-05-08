@@ -69,7 +69,7 @@ def main(args):
 
     tns = dendropy.TaxonNamespace()
     unrooted_species = dendropy.Tree.get(path=species_tree_path, schema='newick',
-                                         taxon_namespace=tns, rooting="force-unrooted", suppress_edge_lengths=True)
+                                         taxon_namespace=tns, rooting="force-unrooted", suppress_edge_lengths=True, preserve_underscores=True)
     if len(tns) < 5:
         raise Exception("Species tree " + species_tree_path + " has less than 5 taxa!\n")
     gene_trees = TreeSet(gene_tree_path)
