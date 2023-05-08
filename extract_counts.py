@@ -1,3 +1,4 @@
+# has code copied from https://github.com/JSdoubleL/DISCO
 import treeswift as ts
 from typing import List, Dict
 import torch
@@ -5,16 +6,17 @@ import numpy as np
 import argparse
 from itertools import combinations
 
-def normalize_name(name : str, labels2idx: Dict[str, int]) -> int:
-    return labels2idx[name.split('_')[0]]
+def normalize_name(name : str, labels2idx: Dict[str, int], delimiter, nth_delimiter) -> int:
+    gene_to_species = lambda x: delimiter.join(x.split(delimiter)[:nth_delimiter])
+    return labels2idx[gene_to_species(name)]
 
-def calculate_counts(trees : List[ts.Tree], labels2idx: Dict[str, int]) -> torch.Tensor:
+def calculate_counts(trees : List[ts.Tree], labels2idx: Dict[str, int], delimiter, nth_delimiter) -> torch.Tensor:
     num_species = len(labels2idx)
     all_counts = []
     for tree in trees:
         counts = [0] * num_species
         for n in tree.traverse_leaves():
-            i = normalize_name(n.label, labels2idx)
+            i = normalize_name(n.label, labels2idx, delimiter, nth_delimiter)
             counts[i] += 1
         m = np.zeros((num_species, num_species))
         for u, v in combinations(range(num_species), 2):
@@ -30,7 +32,7 @@ def calculate_counts(trees : List[ts.Tree], labels2idx: Dict[str, int]) -> torch
 
 from collections import defaultdict, Counter
 
-def calculate_pearson(trees : List[ts.Tree], labels2idx: Dict[str, int]) -> torch.Tensor:
+def _calculate_pearson(trees : List[ts.Tree], labels2idx: Dict[str, int]) -> torch.Tensor:
     num_species = len(labels2idx)
     global_counts = [[] for _ in range(num_species)]
     for tree in trees:
@@ -64,6 +66,10 @@ if __name__ == '__main__':
     parser.add_argument('tree', help='tree file')
     parser.add_argument('out', help='output file')
     parser.add_argument('-s', "--species", help='species tree file')
+    parser.add_argument('-d', "--delimiter", type=str, 
+                        help="Delimiter separating species name from rest of leaf label", default='-')
+    parser.add_argument('-n', '--nth-delimiter', type=int,
+                        help="Split on nth delimiter (only works with -d)", default=1)
     parser.add_argument('--pearson', action='store_true', help='calculate pearson correlation matrix')
     parser.add_argument('--limit', type=int, default=None, help='limit number of trees to read')
     args = parser.parse_args()
@@ -79,9 +85,9 @@ if __name__ == '__main__':
             if args.limit is not None and len(trees) >= args.limit:
                 break
     if not args.pearson:
-        counts = calculate_counts(trees, labels2idx)
+        counts = calculate_counts(trees, labels2idx, args.delimiter, args.nth_delimiter)
         log_counts = counts
     else:
-        log_counts = calculate_pearson(trees, labels2idx)
+        log_counts = _calculate_pearson(trees, labels2idx)
     torch.save(log_counts, args.out)
     torch.save(labels2idx, args.out + '.labels2idx')
